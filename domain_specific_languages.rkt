@@ -298,8 +298,6 @@
 (define (sphere-radius volume)
   (expt (/ volume (* 4/3 pi)) 1/3))
 
-
-
 (define make-specialized-gas-law-volume
   (unit-specializer
    gas-law-volume
@@ -307,3 +305,12 @@
    '(/ newtown (expt meter 2))
    'kelvin
    'mole))
+
+(define conventional-gas-law-volume
+  (make-specialized-gas-law-volume
+   '(expt inch 3)
+   '(/ pound (expt inch 2))
+   'fahrenheit
+   'mole))
+
+;; no thanks, almost all of this has to be implemented by the reader
