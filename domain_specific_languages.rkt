@@ -290,3 +290,20 @@
           (optional #\-)))
 
 ;; 2.3 Wrappers
+(define (gas-law-volume pressure temperature amount)
+  (/ (* amount gas-constant temperature) pressure))
+
+(define gas-constant 8.3144621)
+
+(define (sphere-radius volume)
+  (expt (/ volume (* 4/3 pi)) 1/3))
+
+
+
+(define make-specialized-gas-law-volume
+  (unit-specializer
+   gas-law-volume
+   '(expt meter 3)
+   '(/ newtown (expt meter 2))
+   'kelvin
+   'mole))
