@@ -1,5 +1,5 @@
 #lang racket
-(require racket)
+(require racket (only-in srfi/1 lset=))
 
 ;; compose
 (define (compose f g)
@@ -200,3 +200,93 @@
 
 
 ;; combinators and body plans
+
+;; exercise 2.5 c
+
+(define (composes . fns)
+  (match fns
+    ['() identity]
+    [_ add1(foldl (λ (f g) (λ args
+                    (f (apply g args)))) identity fns)]))
+
+
+((composes ((iterate 5) add1) add1 add1) 5)
+
+((composes (λ (x) (list 'foo x))
+           (λ (y) (list 'bar y))
+           (λ (z) (list 'baz z))) 'a)
+
+;; no fns
+((composes) 3)
+
+;; 2.2. Regular Expressions
+
+(define r:dot ".")
+(define r:bol "^")
+(define r:eol "$")
+
+(define (r:seq . exprs)
+  (string-append "\\(" (apply string-append exprs) "\\)"))
+
+(define (r:quote string)
+  (r:seq
+   (list->string
+    (append-map (λ (char)
+                  (if (memv char chars-needing-quoting)
+                      (list #\\ char)
+                      (list char)))
+                (string->list string)))))
+
+(define chars-needing-quoting '(#\. #\[ #\\ #\^ #\$ #\*))
+(define chars-needing-quoting-in-brackets '(#\] #\^ #\-))
+
+(define (r:alt . exprs)
+  (if (pair? exprs)
+      (apply r:seq
+             (cons (car exprs)
+                   (append-map (λ (expr) (list "\\|" expr))
+                               (cdr exprs))))
+      (r:seq)))
+
+(r:seq r:bol r:dot r:eol)
+(r:alt (r:quote "foo") (r:quote "bar") (r:quote "baz"))
+
+(define (r:repeat min max expr)
+  (apply r:seq
+         (append (make-list min expr)
+                 (cond [(not max) (list expr "*")]
+                       [(= min max) '()]
+                       [else
+                        (make-list (- max min)
+                                   (r:alt expr ""))]))))
+
+(r:repeat 3 5 (r:alt (r:quote "cat") (r:quote "dog")))
+
+(define (bracket string procedure)
+  (list->string
+   (append '(#\[)
+           (procedure (string->list string))
+           '(#\]))))
+
+(define (r:char-from string)
+  (match (string-length string)
+    [0 r:seq]
+    [1 (r:quote string)]
+    [_ (bracket string (λ (members)
+                         (if (lset= eqv? '(#\- #\^) members)
+                             '(#\- #\^)
+                             (quote-bracketed-contents members))))]))
+
+(define (r:char-not-from string)
+  (bracket string (λ (members) (cons #\^ (quote-bracketed-contents members)))))
+
+(define (quote-bracketed-contents members)
+  (define (optional char)
+    (if (memv char members) (list char) '()))
+  (append (optional #\])
+          (remove (λ (c) (memv c chars-needing-quoting-in-brackets))
+                  members)
+          (optional #\^)
+          (optional #\-)))
+
+;; 2.3 Wrappers
